@@ -37,32 +37,35 @@ Values
 (1,1);
 
 --If exist function
-Select ifexist_fn();
-
+--Select ifexist_fn();
+Select  ifexist_fn2(1);
+Select  ifexist_fn2(2);
+Select  ifexist_fn2(3);
+Select  ifexist_fn2(4);
+Select  ifexist_fn2(5);
 
 Select * From cart
 ORDER BY product_id;
 
 --Delete From cart where product_id = 3;
---Update cart SET qty = qty - 1 where product_id >= 1;
---Drop Table cart;
+--Drop Table cart cascade;
 
 ---------------------------------------
 
 
 --3)OrderHeader table----------------------------------------
  Create Table orderHeader (
-    order_id BIGINT   Constraint order_id_key Primary key,
-	user_id BIGINT References users(user_id),
-	 order_date VARCHAR(50) Not Null
+    order_id BIGSERIAL Constraint order_id_key Primary key,
+	user_id BIGINT References users(user_id)ON Delete Cascade,
+	order_date timestamp DEFAULT current_timestamp Not Null
 	 
  );
  
-Insert INTO orderHeader(order_id, user_id, order_date)
+Insert INTO orderHeader(user_id)
 
-Values(1,2,'15 Apr 15h30'),
-      (2,1,'15 Apr 15h35'),
-      (3,2,'16 Apr 14h35'); 
+Values(2),
+      (1),
+      (2); 
 
 Select * From orderHeader; 
 --drop Table orderHeader Cascade;
@@ -89,34 +92,51 @@ Select * FROM orderDetails;
 ---------------------------------------------------------
 
 --Print out one order
-Select oh.order_id, oh.user_id, oh.order_date, od.product_id, od.qty
-From orderHeader AS oh
-INNER JOIN orderDetails As od
-on oh.order_id = od.order_id
-Where oh.order_id = 3;
+Select oh.order_id, oh.user_id, users.user_name, oh.order_date, od.product_id,  prod.product_name, od.qty, sum(prod.price * od.qty) as total_price
+From orderDetails As od
+INNER JOIN products AS prod
+on od.product_id = prod.product_id
+
+
+
+INNER JOIN orderHeader as oh
+ON oh.order_id = od.order_id
+ 
+INNER JOIN users
+on oh.user_id = users.user_id
+Where oh.order_id = 3
+Group By oh.order_id,od.order_id,users.user_name, od.product_id, od.qty,prod.product_name;
 
 ---Print out orders for the day
-Select oh.order_id, oh.user_id, oh.order_date, od.product_id, od.qty
-From orderHeader AS oh
-INNER JOIN orderDetails As od
-on oh.order_id = od.order_id
-Where oh.order_date LIKE '%15 Apr%';
+Select oh.order_id, oh.user_id,users.user_name, oh.order_date, od.product_id,  prod.product_name, od.qty, sum(prod.price * od.qty) as total_price
+From orderDetails As od
+INNER JOIN products AS prod
+on od.product_id = prod.product_id
+
+INNER JOIN orderHeader as oh
+ON oh.order_id = od.order_id
+
+INNER JOIN users
+on oh.user_id = users.user_id
+Where date(oh.order_date) = '2023/03/23'
+Group By oh.order_id,od.order_id,users.user_name, od.product_id, od.qty,prod.product_name
+ORDER BY oh.order_id;
  
 
 
 ---*****************************if exist function*********************************--
-Create or Replace function ifexist_fn()
+Create or Replace function ifexist_fn2(prod_id BIGINT)
 return void as 
 BEGIN
 -----where id is 1
-IF EXISTS(Select * From cart where product_id = 1 )
+IF EXISTS(Select * From cart where product_id = prod_id )
  THEN 
-   UPDATE cart SET qty = qty + 1 where product_id = 1;
+   UPDATE cart SET qty = qty + 1 where product_id = prod_id;
    Else 
     Insert Into cart(product_id, qty)
-	 Values(1,1);
+	 Values(prod_id,1);
 	 END IF;
------where id is 2
+/*-----where id is 2
 IF EXISTS(Select * From cart where product_id >= 2 )
  THEN 
    UPDATE cart SET qty = qty + 1 where product_id >= 2;
@@ -127,7 +147,9 @@ IF EXISTS(Select * From cart where product_id >= 2 )
 	  (4,1),
 	  (5,1);
 	 END IF;
-
+*/
 END;
+ 
+ 
  
  
